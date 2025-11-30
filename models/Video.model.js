@@ -1,11 +1,11 @@
 const mongoose = require("mongoose");
 
 const CommentSchema = new mongoose.Schema({
-  commentId: { type: String, required: true },
-  userId: { type: String, required: true },
-  username: { type: String, required: true },
-  avatar: { type: String },
-  text: { type: String, required: true },
+  commentId: String,
+  userId: String,
+  username: String,
+  avatar: String,
+  text: String,
   timestamp: { type: Date, default: Date.now },
 });
 
@@ -13,17 +13,21 @@ const VideoSchema = new mongoose.Schema({
   videoId: { type: String, required: true, unique: true },
   title: String,
   description: String,
-  thumbnailUrl: String,
-  videoUrl: String,
+  category: String,
   channelId: String,
   uploader: String,
-  views: Number,
-  likes: [String], // userIds
-  dislikes: [String],
-  uploadDate: String,
-  category: String,
 
-  // NEW:
+  // Cloudinary URL for video
+  videoUrl: String,
+  // Cloudinary eager thumbnail (jpg) URL (optional)
+  thumbnailUrl: String,
+
+  views: { type: Number, default: 0 },
+  likes: { type: [String], default: [] },
+  dislikes: { type: [String], default: [] },
+
+  uploadDate: { type: Date, default: Date.now },
+
   comments: [CommentSchema],
 });
 

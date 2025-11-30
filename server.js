@@ -14,6 +14,10 @@ app.use(express.json());
 const authRoutes = require("./routes/authRoutes");
 app.use("/api/auth", authRoutes);
 
+// Video Routes
+const videoRoutes = require('./routes/videoRoutes');
+app.use('/api/videos', videoRoutes);
+
 // Comment Routes
 const commentRoutes = require("./routes/commentRoutes");
 app.use("/api/comments", commentRoutes);
