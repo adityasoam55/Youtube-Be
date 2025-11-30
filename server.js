@@ -10,9 +10,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Routes
+// Auth Routes
 const authRoutes = require("./routes/authRoutes");
 app.use("/api/auth", authRoutes);
+
+// Comment Routes
+const commentRoutes = require("./routes/commentRoutes");
+app.use("/api/comments", commentRoutes);
+
 
 app.get("/", (req, res) => {
   res.send("YouTube Clone Backend Running...");
