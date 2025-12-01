@@ -112,13 +112,16 @@ exports.getVideoById = async (req, res) => {
 
 exports.addView = async (req, res) => {
   try {
-    const { videoId } = req.params;
+    // console.log("📌 VIEW ROUTE HIT");
+    // console.log("ID received from frontend:", req.params.id);
 
     const updatedVideo = await Video.findOneAndUpdate(
-      { videoId },
+      { videoId: req.params.id },
       { $inc: { views: 1 } },
       { new: true }
     );
+
+    // console.log("📌 UPDATED VIDEO:", updatedVideo);
 
     if (!updatedVideo) {
       return res.status(404).json({ message: "Video not found" });
@@ -126,9 +129,11 @@ exports.addView = async (req, res) => {
 
     res.json(updatedVideo);
   } catch (err) {
+    console.error("❌ Error in addView:", err);
     res.status(500).json({ message: err.message });
   }
 };
+
 
 exports.toggleLike = async (req, res) => {
   try {
@@ -155,7 +160,6 @@ exports.toggleLike = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
 
 exports.toggleDislike = async (req, res) => {
   try {
