@@ -1,21 +1,16 @@
+// backend/src/routes/videoRoutes.js
 const express = require("express");
 const router = express.Router();
-const upload = require("../middleware/multerMemory");
 const videoController = require("../controllers/videoController");
-const auth = require("../middleware/auth"); // <-- add this
+const auth = require("../middleware/authMiddleware"); 
 
-// Upload (PROTECTED) — logged-in users only
-router.post(
-  "/upload",
-  auth, // <--- protect route
-  upload.single("video"),
-  videoController.uploadVideo
-);
+// Upload (PROTECTED): save metadata (frontend provides videoUrl)
+router.post("/upload", auth, videoController.saveVideo);
 
-// Public: get all videos
+// List
 router.get("/", videoController.getVideos);
 
-// Public: get single video
+// Get single
 router.get("/:id", videoController.getVideoById);
 
 module.exports = router;

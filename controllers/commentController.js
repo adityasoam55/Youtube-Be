@@ -1,4 +1,4 @@
-const Video = require("../models/Video");
+const Video = require("../models/Video.model");
 const { v4: uuidv4 } = require("uuid");
 
 // ADD COMMENT

@@ -1,3 +1,4 @@
+// backend/src/models/Video.model.js
 const mongoose = require("mongoose");
 
 const CommentSchema = new mongoose.Schema({
@@ -11,16 +12,16 @@ const CommentSchema = new mongoose.Schema({
 
 const VideoSchema = new mongoose.Schema({
   videoId: { type: String, required: true, unique: true },
-  title: String,
+  title: { type: String, required: true },
   description: String,
   category: String,
   channelId: String,
   uploader: String,
 
-  // Cloudinary URL for video
-  videoUrl: String,
-  // Cloudinary eager thumbnail (jpg) URL (optional)
-  thumbnailUrl: String,
+  // Now a URL to an external video (YouTube embed URL or MP4 public link)
+  videoUrl: { type: String, required: true },
+  // Optional thumbnail (YouTube thumbnail or other host)
+  thumbnailUrl: { type: String, default: "" },
 
   views: { type: Number, default: 0 },
   likes: { type: [String], default: [] },

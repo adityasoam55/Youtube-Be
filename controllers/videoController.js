@@ -1,53 +1,74 @@
+// backend/src/controllers/videoController.js
 const Video = require("../models/Video.model");
-const cloudinary = require("../config/cloudinary");
 const { v4: uuidv4 } = require("uuid");
 
-// helper: upload buffer to Cloudinary via upload_stream
-function uploadBufferToCloudinary(buffer, publicIdBase, options = {}) {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      options,
-      (error, result) => {
-        if (error) return reject(error);
-        resolve(result);
-      }
-    );
-    stream.end(buffer);
-  });
+/**
+ * Helper: normalize YouTube links to embed URL and generate thumbnail
+ * Accepts:
+ *  - https://www.youtube.com/watch?v=VIDEOID
+ *  - https://youtu.be/VIDEOID
+ *  - https://www.youtube.com/embed/VIDEOID
+ *  - direct mp4 links -> returned unchanged
+ */
+function normalizeVideoLink(url) {
+  if (!url) return { videoUrl: "", thumbnailUrl: "" };
+
+  // Trim
+  const trimmed = url.trim();
+
+  // YouTube watch URL
+  const ytWatch = trimmed.match(/[?&]v=([^&]+)/);
+  if (ytWatch && ytWatch[1]) {
+    const id = ytWatch[1];
+    return {
+      videoUrl: `https://www.youtube.com/embed/${id}`,
+      thumbnailUrl: `https://i.ytimg.com/vi/${id}/maxresdefault.jpg`,
+    };
+  }
+
+  // youtu.be short link
+  const ytShort = trimmed.match(/youtu\.be\/([^?&/]+)/);
+  if (ytShort && ytShort[1]) {
+    const id = ytShort[1];
+    return {
+      videoUrl: `https://www.youtube.com/embed/${id}`,
+      thumbnailUrl: `https://i.ytimg.com/vi/${id}/maxresdefault.jpg`,
+    };
+  }
+
+  // embed link already
+  const ytEmbed = trimmed.match(/youtube\.com\/embed\/([^?&/]+)/);
+  if (ytEmbed && ytEmbed[1]) {
+    const id = ytEmbed[1];
+    return {
+      videoUrl: trimmed,
+      thumbnailUrl: `https://i.ytimg.com/vi/${id}/maxresdefault.jpg`,
+    };
+  }
+
+  // If link looks like mp4 or other direct video host, keep it and no thumbnail
+  // Basic heuristic:
+  if (/\.(mp4|webm|ogg|mov|mkv)$/i.test(trimmed)) {
+    return { videoUrl: trimmed, thumbnailUrl: "" };
+  }
+
+  // Fallback: return as-is (app will try to iframe if compatible)
+  return { videoUrl: trimmed, thumbnailUrl: "" };
 }
 
-// POST /api/videos/upload
-exports.uploadVideo = async (req, res) => {
+exports.saveVideo = async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ message: "No file provided" });
+    const { title, description, category, channelId, uploader, videoUrl } =
+      req.body;
 
-    const { title, description, category, channelId, uploader } = req.body;
+    if (!videoUrl || !title) {
+      return res
+        .status(400)
+        .json({ message: "title and videoUrl are required" });
+    }
 
-    const videoPublicId = `youtube_clone/videos/${Date.now()}_${Math.round(
-      Math.random() * 1e6
-    )}`;
-
-    // upload video to cloudinary (resource_type: 'video')
-    const uploadResult = await uploadBufferToCloudinary(
-      req.file.buffer,
-      videoPublicId,
-      {
-        resource_type: "video",
-        public_id: videoPublicId,
-        // generate an image thumbnail eagerly
-        eager: [{ width: 720, height: 405, crop: "fill", format: "jpg" }],
-        eager_async: false,
-      }
-    );
-
-    // uploadResult.secure_url -> video URL
-    // uploadResult.eager[0].secure_url -> thumbnail (if eager worked)
-    const videoUrl = uploadResult.secure_url;
-    const thumbnailUrl =
-      (uploadResult.eager &&
-        uploadResult.eager[0] &&
-        uploadResult.eager[0].secure_url) ||
-      "";
+    // Normalize video link (youtube -> embed + thumbnail)
+    const normalized = normalizeVideoLink(videoUrl);
 
     const newVideo = new Video({
       videoId: uuidv4(),
@@ -56,20 +77,20 @@ exports.uploadVideo = async (req, res) => {
       category,
       channelId,
       uploader,
-      videoUrl,
-      thumbnailUrl,
+      videoUrl: normalized.videoUrl,
+      thumbnailUrl: normalized.thumbnailUrl,
     });
 
     await newVideo.save();
 
-    res.status(201).json({ message: "Uploaded", video: newVideo });
+    return res.status(201).json({ message: "Video saved", video: newVideo });
   } catch (err) {
-    console.error("uploadVideo error", err);
-    res.status(500).json({ message: err.message || "Server error" });
+    console.error("saveVideo error", err);
+    return res.status(500).json({ message: err.message || "Server error" });
   }
 };
 
-// GET /api/videos
+// GET ALL and GET BY ID 
 exports.getVideos = async (req, res) => {
   try {
     const videos = await Video.find().sort({ uploadDate: -1 });
@@ -79,7 +100,6 @@ exports.getVideos = async (req, res) => {
   }
 };
 
-// GET /api/videos/:id
 exports.getVideoById = async (req, res) => {
   try {
     const video = await Video.findOne({ videoId: req.params.id });
