@@ -90,7 +90,7 @@ exports.saveVideo = async (req, res) => {
   }
 };
 
-// GET ALL and GET BY ID 
+// GET ALL and GET BY ID
 exports.getVideos = async (req, res) => {
   try {
     const videos = await Video.find().sort({ uploadDate: -1 });
@@ -104,6 +104,79 @@ exports.getVideoById = async (req, res) => {
   try {
     const video = await Video.findOne({ videoId: req.params.id });
     if (!video) return res.status(404).json({ message: "Not found" });
+    res.json(video);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.addView = async (req, res) => {
+  try {
+    const { videoId } = req.params;
+
+    const updatedVideo = await Video.findOneAndUpdate(
+      { videoId },
+      { $inc: { views: 1 } },
+      { new: true }
+    );
+
+    if (!updatedVideo) {
+      return res.status(404).json({ message: "Video not found" });
+    }
+
+    res.json(updatedVideo);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.toggleLike = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { videoId } = req.params;
+
+    const video = await Video.findOne({ videoId });
+    if (!video) return res.status(404).json({ message: "Video not found" });
+
+    // Remove user from dislikes if present
+    video.dislikes = video.dislikes.filter((id) => id !== userId);
+
+    if (video.likes.includes(userId)) {
+      // Unlike
+      video.likes = video.likes.filter((id) => id !== userId);
+    } else {
+      // Like
+      video.likes.push(userId);
+    }
+
+    await video.save();
+    res.json(video);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+exports.toggleDislike = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { videoId } = req.params;
+
+    const video = await Video.findOne({ videoId });
+    if (!video) return res.status(404).json({ message: "Video not found" });
+
+    // Remove user from likes if present
+    video.likes = video.likes.filter((id) => id !== userId);
+
+    if (video.dislikes.includes(userId)) {
+      // Remove dislike
+      video.dislikes = video.dislikes.filter((id) => id !== userId);
+    } else {
+      // Add dislike
+      video.dislikes.push(userId);
+    }
+
+    await video.save();
     res.json(video);
   } catch (err) {
     res.status(500).json({ message: err.message });

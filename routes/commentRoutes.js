@@ -1,4 +1,5 @@
 const express = require("express");
+const auth = require('../middleware/authMiddleware')
 const router = express.Router();
 const {
   addComment,
@@ -9,10 +10,11 @@ const {
 // Add comment
 router.post("/:videoId", addComment);
 
-// Edit comment
-router.put("/:videoId/:commentId", editComment);
+// Update comment
+router.put("/:videoId/comment/:commentId", auth, editComment);
 
-// Delete comment
-router.delete("/:videoId/:commentId", deleteComment);
+// delete comment
+router.delete("/:videoId/comment/:commentId", auth, deleteComment);
+
 
 module.exports = router;

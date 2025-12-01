@@ -1,16 +1,15 @@
-// backend/src/routes/videoRoutes.js
 const express = require("express");
 const router = express.Router();
+const auth = require("../middleware/authMiddleware");
 const videoController = require("../controllers/videoController");
-const auth = require("../middleware/authMiddleware"); 
 
-// Upload (PROTECTED): save metadata (frontend provides videoUrl)
-router.post("/upload", auth, videoController.saveVideo);
+// PUT routes FIRST
+router.put("/:id/view", videoController.addView);
+router.put("/:id/like", auth, videoController.toggleLike);
+router.put("/:id/dislike", auth, videoController.toggleDislike);
 
-// List
+// GET routes AFTER
 router.get("/", videoController.getVideos);
-
-// Get single
 router.get("/:id", videoController.getVideoById);
 
 module.exports = router;

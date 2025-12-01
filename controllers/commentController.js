@@ -33,6 +33,7 @@ exports.editComment = async (req, res) => {
   try {
     const { videoId, commentId } = req.params;
     const { text } = req.body;
+    const userId = req.user.userId;
 
     const video = await Video.findOne({ videoId });
     if (!video) return res.status(404).json({ message: "Video not found" });
@@ -40,10 +41,13 @@ exports.editComment = async (req, res) => {
     const comment = video.comments.find((c) => c.commentId === commentId);
     if (!comment) return res.status(404).json({ message: "Comment not found" });
 
+    if (comment.userId !== userId)
+      return res.status(403).json({ message: "Not allowed" });
+
     comment.text = text;
 
     await video.save();
-    res.json(comment);
+    res.json(video);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -53,14 +57,21 @@ exports.editComment = async (req, res) => {
 exports.deleteComment = async (req, res) => {
   try {
     const { videoId, commentId } = req.params;
+    const userId = req.user.userId;
 
     const video = await Video.findOne({ videoId });
     if (!video) return res.status(404).json({ message: "Video not found" });
 
+    const comment = video.comments.find((c) => c.commentId === commentId);
+    if (!comment) return res.status(404).json({ message: "Comment not found" });
+
+    if (comment.userId !== userId)
+      return res.status(403).json({ message: "Not allowed" });
+
     video.comments = video.comments.filter((c) => c.commentId !== commentId);
 
     await video.save();
-    res.json({ message: "Comment deleted" });
+    res.json(video);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
