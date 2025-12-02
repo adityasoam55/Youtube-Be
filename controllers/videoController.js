@@ -56,37 +56,63 @@ function normalizeVideoLink(url) {
   return { videoUrl: trimmed, thumbnailUrl: "" };
 }
 
-exports.saveVideo = async (req, res) => {
+// Upload video by saving only link
+exports.uploadVideo = async (req, res) => {
   try {
-    const { title, description, category, channelId, uploader, videoUrl } =
-      req.body;
+    const { title, description, category, videoUrl } = req.body;
+    const user = req.user;
 
-    if (!videoUrl || !title) {
-      return res
-        .status(400)
-        .json({ message: "title and videoUrl are required" });
+    if (!videoUrl) {
+      return res.status(400).json({ message: "Video URL required" });
     }
 
-    // Normalize video link (youtube -> embed + thumbnail)
-    const normalized = normalizeVideoLink(videoUrl);
+    // Extract YouTube ID for all formats (watch?v=, youtu.be, embed)
+    const extractYouTubeId = (url) => {
+      let match;
+
+      // watch?v=
+      match = url.match(/[?&]v=([^&]+)/);
+      if (match) return match[1];
+
+      // youtu.be/
+      match = url.match(/youtu\.be\/([^?]+)/);
+      if (match) return match[1];
+
+      // embed/
+      match = url.match(/embed\/([^?]+)/);
+      if (match) return match[1];
+
+      return null;
+    };
+
+    const youtubeId = extractYouTubeId(videoUrl);
+
+    let thumbnailUrl = "";
+    if (youtubeId) {
+      // generate HD YouTube thumbnail
+      thumbnailUrl = `https://i.ytimg.com/vi/${youtubeId}/maxresdefault.jpg`;
+    }
 
     const newVideo = new Video({
       videoId: uuidv4(),
       title,
       description,
       category,
-      channelId,
-      uploader,
-      videoUrl: normalized.videoUrl,
-      thumbnailUrl: normalized.thumbnailUrl,
+      uploader: user.username,
+      channelId: user.userId,
+      videoUrl,
+      thumbnailUrl,
     });
 
     await newVideo.save();
 
-    return res.status(201).json({ message: "Video saved", video: newVideo });
+    res.status(201).json({
+      message: "Video uploaded successfully",
+      video: newVideo,
+    });
   } catch (err) {
-    console.error("saveVideo error", err);
-    return res.status(500).json({ message: err.message || "Server error" });
+    console.error("Upload error", err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -133,7 +159,6 @@ exports.addView = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
 
 exports.toggleLike = async (req, res) => {
   try {

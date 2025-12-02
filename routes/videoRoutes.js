@@ -3,12 +3,15 @@ const router = express.Router();
 const auth = require("../middleware/authMiddleware");
 const videoController = require("../controllers/videoController");
 
-// PUT routes FIRST
+// ==== UPLOAD (ONLY URL, NOT FILE) ====
+router.post("/upload", auth, videoController.uploadVideo);
+
+// ==== LIKE / VIEW / DISLIKE ====
 router.put("/:id/view", videoController.addView);
 router.put("/:id/like", auth, videoController.toggleLike);
 router.put("/:id/dislike", auth, videoController.toggleDislike);
 
-// GET routes AFTER
+// ==== GET VIDEOS ====
 router.get("/", videoController.getVideos);
 router.get("/:id", videoController.getVideoById);
 
