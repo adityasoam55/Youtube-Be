@@ -23,6 +23,11 @@ const commentRoutes = require("./routes/commentRoutes");
 app.use("/api/comments", commentRoutes);
 
 
+// User/Profile Routes
+const userRoutes = require("./routes/userRoutes");
+app.use("/api/users", userRoutes);
+
+
 app.get("/", (req, res) => {
   res.send("YouTube Clone Backend Running...");
 });
