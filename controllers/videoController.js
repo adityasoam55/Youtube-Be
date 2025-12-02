@@ -212,9 +212,11 @@ exports.addView = async (req, res) => {
 exports.toggleLike = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { videoId } = req.params;
+    const videoIdParam = req.params.videoId || req.params.id;
+    if (!videoIdParam)
+      return res.status(400).json({ message: "Video id missing" });
 
-    const video = await Video.findOne({ videoId });
+    const video = await Video.findOne({ videoId: videoIdParam });
     if (!video) return res.status(404).json({ message: "Video not found" });
 
     // Remove user from dislikes if present
@@ -238,9 +240,11 @@ exports.toggleLike = async (req, res) => {
 exports.toggleDislike = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { videoId } = req.params;
+    const videoIdParam = req.params.videoId || req.params.id;
+    if (!videoIdParam)
+      return res.status(400).json({ message: "Video id missing" });
 
-    const video = await Video.findOne({ videoId });
+    const video = await Video.findOne({ videoId: videoIdParam });
     if (!video) return res.status(404).json({ message: "Video not found" });
 
     // Remove user from likes if present
