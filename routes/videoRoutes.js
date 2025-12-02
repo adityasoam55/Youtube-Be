@@ -15,4 +15,11 @@ router.put("/:id/dislike", auth, videoController.toggleDislike);
 router.get("/", videoController.getVideos);
 router.get("/:id", videoController.getVideoById);
 
+// ==== GET SUGGESTED VIDEOS ====
+router.get(
+  "/suggest/:category/:excludeId",
+  videoController.getSuggestedVideos
+);
+
+
 module.exports = router;

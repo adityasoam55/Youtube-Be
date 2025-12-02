@@ -136,18 +136,30 @@ exports.getVideoById = async (req, res) => {
   }
 };
 
+exports.getSuggestedVideos = async (req, res) => {
+  try {
+    const { category, excludeId } = req.params;
+
+    const videos = await Video.find({
+      category,
+      videoId: { $ne: excludeId },
+    })
+      .sort({ uploadDate: -1 })
+      .limit(8);
+
+    res.json(videos);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching suggestions" });
+  }
+};
+
 exports.addView = async (req, res) => {
   try {
-    // console.log("📌 VIEW ROUTE HIT");
-    // console.log("ID received from frontend:", req.params.id);
-
     const updatedVideo = await Video.findOneAndUpdate(
       { videoId: req.params.id },
       { $inc: { views: 1 } },
       { new: true }
     );
-
-    // console.log("📌 UPDATED VIDEO:", updatedVideo);
 
     if (!updatedVideo) {
       return res.status(404).json({ message: "Video not found" });
