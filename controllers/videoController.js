@@ -1,5 +1,6 @@
 // backend/src/controllers/videoController.js
 const Video = require("../models/Video.model");
+const User = require("../models/User.model");
 const { v4: uuidv4 } = require("uuid");
 
 /**
@@ -120,7 +121,23 @@ exports.uploadVideo = async (req, res) => {
 exports.getVideos = async (req, res) => {
   try {
     const videos = await Video.find().sort({ uploadDate: -1 });
-    res.json(videos);
+    // Attach uploader avatar from users collection when available
+    const channelIds = [
+      ...new Set(videos.map((v) => v.channelId).filter(Boolean)),
+    ];
+    const users = await User.find({ userId: { $in: channelIds } });
+    const avatarMap = {};
+    users.forEach((u) => {
+      avatarMap[u.userId] = u.avatar || "";
+    });
+
+    const videosWithAvatar = videos.map((v) => {
+      const obj = v.toObject ? v.toObject() : { ...v };
+      obj.uploaderAvatar = avatarMap[v.channelId] || "";
+      return obj;
+    });
+
+    res.json(videosWithAvatar);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -130,7 +147,11 @@ exports.getVideoById = async (req, res) => {
   try {
     const video = await Video.findOne({ videoId: req.params.id });
     if (!video) return res.status(404).json({ message: "Not found" });
-    res.json(video);
+    // attach uploader avatar if available
+    const user = await User.findOne({ userId: video.channelId });
+    const obj = video.toObject ? video.toObject() : { ...video };
+    obj.uploaderAvatar = (user && user.avatar) || "";
+    res.json(obj);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -147,7 +168,23 @@ exports.getSuggestedVideos = async (req, res) => {
       .sort({ uploadDate: -1 })
       .limit(8);
 
-    res.json(videos);
+    // Attach uploader avatar
+    const channelIds = [
+      ...new Set(videos.map((v) => v.channelId).filter(Boolean)),
+    ];
+    const users = await User.find({ userId: { $in: channelIds } });
+    const avatarMap = {};
+    users.forEach((u) => {
+      avatarMap[u.userId] = u.avatar || "";
+    });
+
+    const videosWithAvatar = videos.map((v) => {
+      const obj = v.toObject ? v.toObject() : { ...v };
+      obj.uploaderAvatar = avatarMap[v.channelId] || "";
+      return obj;
+    });
+
+    res.json(videosWithAvatar);
   } catch (err) {
     res.status(500).json({ message: "Error fetching suggestions" });
   }
