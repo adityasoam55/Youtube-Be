@@ -264,3 +264,79 @@ exports.toggleDislike = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// GET VIDEOS BY CHANNEL (for channel owner)
+exports.getChannelVideos = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const videos = await Video.find({ channelId: userId }).sort({
+      uploadDate: -1,
+    });
+
+    const user = await User.findOne({ userId });
+    const uploaderAvatar = (user && user.avatar) || "";
+
+    const videosWithAvatar = videos.map((v) => {
+      const obj = v.toObject ? v.toObject() : { ...v };
+      obj.uploaderAvatar = uploaderAvatar;
+      return obj;
+    });
+
+    res.json(videosWithAvatar);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// UPDATE VIDEO (only channel owner can update their videos)
+exports.updateVideo = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { videoId } = req.params;
+    const { title, description, category } = req.body;
+
+    const video = await Video.findOne({ videoId });
+    if (!video) return res.status(404).json({ message: "Video not found" });
+
+    // Check if user owns this video
+    if (video.channelId !== userId) {
+      return res
+        .status(403)
+        .json({ message: "Not authorized to update this video" });
+    }
+
+    // Update video fields
+    if (title) video.title = title;
+    if (description !== undefined) video.description = description;
+    if (category) video.category = category;
+
+    await video.save();
+    res.json({ message: "Video updated successfully", video });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// DELETE VIDEO (only channel owner can delete their videos)
+exports.deleteVideo = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { videoId } = req.params;
+
+    const video = await Video.findOne({ videoId });
+    if (!video) return res.status(404).json({ message: "Video not found" });
+
+    // Check if user owns this video
+    if (video.channelId !== userId) {
+      return res
+        .status(403)
+        .json({ message: "Not authorized to delete this video" });
+    }
+
+    await Video.deleteOne({ videoId });
+    res.json({ message: "Video deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
