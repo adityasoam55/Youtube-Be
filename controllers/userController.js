@@ -24,15 +24,36 @@ exports.updateUser = async (req, res) => {
 // UPDATE AVATAR
 exports.updateAvatar = async (req, res) => {
   try {
-    if (!req.file)
+    if (!req.file) {
       return res.status(400).json({ message: "No image provided" });
+    }
 
-    const uploadResult = await cloudinary.uploader.upload(req.file.path, {
-      folder: "youtube_clone/avatars",
-      resource_type: "image",
-    });
+    // Check if Cloudinary credentials are configured
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY) {
+      return res
+        .status(500)
+        .json({
+          message: "Server misconfigured: Cloudinary credentials missing",
+        });
+    }
 
-    fs.unlinkSync(req.file.path); // Delete local file
+    let uploadResult;
+    try {
+      uploadResult = await cloudinary.uploader.upload(req.file.path, {
+        folder: "youtube_clone/avatars",
+        resource_type: "image",
+      });
+    } catch (cloudinaryError) {
+      console.error("Cloudinary upload error:", cloudinaryError.message);
+      return res
+        .status(500)
+        .json({ message: "Failed to upload image to cloud service" });
+    }
+
+    // Clean up local file if it exists
+    if (req.file.path && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
 
     const user = await User.findOneAndUpdate(
       { userId: req.user.userId },
@@ -42,7 +63,7 @@ exports.updateAvatar = async (req, res) => {
 
     res.json({ message: "Avatar updated", user });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Avatar update failed" });
+    console.error("Avatar update error:", err);
+    res.status(500).json({ message: "Avatar update failed: " + err.message });
   }
 };
