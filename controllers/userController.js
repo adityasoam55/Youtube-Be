@@ -9,25 +9,41 @@ exports.getMe = async (req, res) => {
 };
 
 // UPDATE USER DETAILS
+// UPDATE USER DETAILS
 exports.updateUser = async (req, res) => {
-  const updates = req.body;
+  try {
+    const updates = {};
 
-  const user = await User.findOneAndUpdate(
-    { userId: req.user.userId },
-    updates,
-    { new: true }
-  );
+    // Only update fields that actually exist in schema
+    if (req.body.username !== undefined) updates.username = req.body.username;
+    if (req.body.email !== undefined) updates.email = req.body.email;
 
-  res.json(user);
+    // NEW: Channel Description
+    if (req.body.channelDescription !== undefined) {
+      updates.channelDescription = req.body.channelDescription;
+    }
+
+    const user = await User.findOneAndUpdate(
+      { userId: req.user.userId },
+      { $set: updates },
+      { new: true }
+    );
+
+    res.json(user);
+  } catch (err) {
+    console.error("Update user error:", err);
+    res.status(500).json({ message: err.message });
+  }
 };
 
 // Upload Banner
 exports.updateBanner = async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ message: "No image provided" });
+    if (!req.file)
+      return res.status(400).json({ message: "No image provided" });
 
     const result = await cloudinary.uploader.upload(req.file.path, {
-      folder: "youtube_banner"
+      folder: "youtube_banner",
     });
 
     const user = await User.findOneAndUpdate(
@@ -42,7 +58,6 @@ exports.updateBanner = async (req, res) => {
   }
 };
 
-
 // UPDATE AVATAR
 exports.updateAvatar = async (req, res) => {
   try {
@@ -52,11 +67,9 @@ exports.updateAvatar = async (req, res) => {
 
     // Check if Cloudinary credentials are configured
     if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY) {
-      return res
-        .status(500)
-        .json({
-          message: "Server misconfigured: Cloudinary credentials missing",
-        });
+      return res.status(500).json({
+        message: "Server misconfigured: Cloudinary credentials missing",
+      });
     }
 
     let uploadResult;
