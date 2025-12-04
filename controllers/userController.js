@@ -21,6 +21,28 @@ exports.updateUser = async (req, res) => {
   res.json(user);
 };
 
+// Upload Banner
+exports.updateBanner = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: "No image provided" });
+
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: "youtube_banner"
+    });
+
+    const user = await User.findOneAndUpdate(
+      { userId: req.user.userId },
+      { banner: result.secure_url },
+      { new: true }
+    );
+
+    res.json({ message: "Banner updated", user });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
 // UPDATE AVATAR
 exports.updateAvatar = async (req, res) => {
   try {
