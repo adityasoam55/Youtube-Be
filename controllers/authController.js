@@ -1,6 +1,6 @@
-const User = require("../models/User.model");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
+import User from "../models/User.model.js";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 // Generate JWT Token
 const generateToken = (user) => {
@@ -8,7 +8,7 @@ const generateToken = (user) => {
     {
       userId: user.userId,
       username: user.username,
-      email: user.email
+      email: user.email,
     },
     process.env.JWT_SECRET,
     { expiresIn: "7d" }
@@ -16,12 +16,13 @@ const generateToken = (user) => {
 };
 
 // REGISTER USER
-exports.registerUser = async (req, res) => {
+export const registerUser = async (req, res) => {
   try {
     const { userId, username, email, password, avatar } = req.body;
 
     const existingEmail = await User.findOne({ email });
-    if (existingEmail) return res.status(400).json({ message: "Email already exists" });
+    if (existingEmail)
+      return res.status(400).json({ message: "Email already exists" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -31,7 +32,7 @@ exports.registerUser = async (req, res) => {
       email,
       password: hashedPassword,
       avatar,
-      channels: []
+      channels: [],
     });
 
     await newUser.save();
@@ -46,8 +47,8 @@ exports.registerUser = async (req, res) => {
         username,
         email,
         avatar,
-        channels: []
-      }
+        channels: [],
+      },
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -55,12 +56,13 @@ exports.registerUser = async (req, res) => {
 };
 
 // LOGIN USER
-exports.loginUser = async (req, res) => {
+export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
     const existingUser = await User.findOne({ email });
-    if (!existingUser) return res.status(404).json({ message: "User not found" });
+    if (!existingUser)
+      return res.status(404).json({ message: "User not found" });
 
     const isMatch = await bcrypt.compare(password, existingUser.password);
     if (!isMatch) return res.status(400).json({ message: "Invalid password" });
@@ -75,8 +77,8 @@ exports.loginUser = async (req, res) => {
         username: existingUser.username,
         email: existingUser.email,
         avatar: existingUser.avatar,
-        channels: existingUser.channels
-      }
+        channels: existingUser.channels,
+      },
     });
   } catch (err) {
     res.status(500).json({ message: err.message });

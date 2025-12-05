@@ -1,8 +1,8 @@
-const Video = require("../models/Video.model");
-const { v4: uuidv4 } = require("uuid");
+import Video from "../models/Video.model.js";
+import { v4 as uuidv4 } from "uuid";
 
 // ADD COMMENT
-exports.addComment = async (req, res) => {
+export const addComment = async (req, res) => {
   try {
     const { videoId } = req.params;
     const { userId, username, avatar, text } = req.body;
@@ -29,7 +29,7 @@ exports.addComment = async (req, res) => {
 };
 
 // EDIT COMMENT
-exports.editComment = async (req, res) => {
+export const editComment = async (req, res) => {
   try {
     const { videoId, commentId } = req.params;
     const { text } = req.body;
@@ -54,7 +54,7 @@ exports.editComment = async (req, res) => {
 };
 
 // DELETE COMMENT
-exports.deleteComment = async (req, res) => {
+export const deleteComment = async (req, res) => {
   try {
     const { videoId, commentId } = req.params;
     const userId = req.user.userId;

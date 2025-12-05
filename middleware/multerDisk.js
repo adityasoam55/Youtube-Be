@@ -1,6 +1,6 @@
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 
 // Ensure temp_uploads directory exists
 const tempDir = "temp_uploads/";
@@ -24,4 +24,8 @@ const fileFilter = (req, file, cb) => {
   else cb(new Error("Only image files allowed"), false);
 };
 
-module.exports = multer({ storage, fileFilter });
+export default multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 10 * 1024 * 1024 },
+});

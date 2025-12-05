@@ -1,16 +1,15 @@
-const User = require("../models/User.model");
-const cloudinary = require("../config/cloudinary");
-const fs = require("fs");
+import User from "../models/User.model.js";
+import cloudinary from "../config/cloudinary.js";
+import fs from "fs";
 
 // GET LOGGED-IN USER
-exports.getMe = async (req, res) => {
+export const getMe = async (req, res) => {
   const user = await User.findOne({ userId: req.user.userId });
   res.json(user);
 };
 
 // UPDATE USER DETAILS
-// UPDATE USER DETAILS
-exports.updateUser = async (req, res) => {
+export const updateUser = async (req, res) => {
   try {
     const updates = {};
 
@@ -37,7 +36,7 @@ exports.updateUser = async (req, res) => {
 };
 
 // Upload Banner
-exports.updateBanner = async (req, res) => {
+export const updateBanner = async (req, res) => {
   try {
     if (!req.file)
       return res.status(400).json({ message: "No image provided" });
@@ -59,7 +58,7 @@ exports.updateBanner = async (req, res) => {
 };
 
 // UPDATE AVATAR
-exports.updateAvatar = async (req, res) => {
+export const updateAvatar = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: "No image provided" });

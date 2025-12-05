@@ -1,20 +1,13 @@
-// backend/src/controllers/videoController.js
-const Video = require("../models/Video.model");
-const User = require("../models/User.model");
-const { v4: uuidv4 } = require("uuid");
+import Video from "../models/Video.model.js";
+import User from "../models/User.model.js";
+import { v4 as uuidv4 } from "uuid";
 
 /**
  * Helper: normalize YouTube links to embed URL and generate thumbnail
- * Accepts:
- *  - https://www.youtube.com/watch?v=VIDEOID
- *  - https://youtu.be/VIDEOID
- *  - https://www.youtube.com/embed/VIDEOID
- *  - direct mp4 links -> returned unchanged
  */
 function normalizeVideoLink(url) {
   if (!url) return { videoUrl: "", thumbnailUrl: "" };
 
-  // Trim
   const trimmed = url.trim();
 
   // YouTube watch URL
@@ -48,7 +41,6 @@ function normalizeVideoLink(url) {
   }
 
   // If link looks like mp4 or other direct video host, keep it and no thumbnail
-  // Basic heuristic:
   if (/\.(mp4|webm|ogg|mov|mkv)$/i.test(trimmed)) {
     return { videoUrl: trimmed, thumbnailUrl: "" };
   }
@@ -58,7 +50,7 @@ function normalizeVideoLink(url) {
 }
 
 // Upload video by saving only link
-exports.uploadVideo = async (req, res) => {
+export const uploadVideo = async (req, res) => {
   try {
     const { title, description, category, videoUrl } = req.body;
     const user = req.user;
@@ -118,7 +110,7 @@ exports.uploadVideo = async (req, res) => {
 };
 
 // GET ALL and GET BY ID
-exports.getVideos = async (req, res) => {
+export const getVideos = async (req, res) => {
   try {
     const videos = await Video.find().sort({ uploadDate: -1 });
     // Attach uploader avatar from users collection when available
@@ -143,7 +135,7 @@ exports.getVideos = async (req, res) => {
   }
 };
 
-exports.getVideoById = async (req, res) => {
+export const getVideoById = async (req, res) => {
   try {
     const video = await Video.findOne({ videoId: req.params.id });
     if (!video) return res.status(404).json({ message: "Not found" });
@@ -157,7 +149,7 @@ exports.getVideoById = async (req, res) => {
   }
 };
 
-exports.getSuggestedVideos = async (req, res) => {
+export const getSuggestedVideos = async (req, res) => {
   try {
     const { category, excludeId } = req.params;
 
@@ -190,7 +182,7 @@ exports.getSuggestedVideos = async (req, res) => {
   }
 };
 
-exports.addView = async (req, res) => {
+export const addView = async (req, res) => {
   try {
     const updatedVideo = await Video.findOneAndUpdate(
       { videoId: req.params.id },
@@ -209,7 +201,7 @@ exports.addView = async (req, res) => {
   }
 };
 
-exports.toggleLike = async (req, res) => {
+export const toggleLike = async (req, res) => {
   try {
     const userId = req.user.userId;
     const videoIdParam = req.params.videoId || req.params.id;
@@ -237,7 +229,7 @@ exports.toggleLike = async (req, res) => {
   }
 };
 
-exports.toggleDislike = async (req, res) => {
+export const toggleDislike = async (req, res) => {
   try {
     const userId = req.user.userId;
     const videoIdParam = req.params.videoId || req.params.id;
@@ -266,7 +258,7 @@ exports.toggleDislike = async (req, res) => {
 };
 
 // GET VIDEOS BY CHANNEL (for channel owner)
-exports.getChannelVideos = async (req, res) => {
+export const getChannelVideos = async (req, res) => {
   try {
     const userId = req.user.userId;
 
@@ -290,7 +282,7 @@ exports.getChannelVideos = async (req, res) => {
 };
 
 // UPDATE VIDEO (only channel owner can update their videos)
-exports.updateVideo = async (req, res) => {
+export const updateVideo = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { videoId } = req.params;
@@ -319,7 +311,7 @@ exports.updateVideo = async (req, res) => {
 };
 
 // DELETE VIDEO (only channel owner can delete their videos)
-exports.deleteVideo = async (req, res) => {
+export const deleteVideo = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { videoId } = req.params;

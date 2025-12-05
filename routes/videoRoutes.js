@@ -1,7 +1,8 @@
-const express = require("express");
+import express from "express";
+import auth from "../middleware/authMiddleware.js";
+import * as videoController from "../controllers/videoController.js";
+
 const router = express.Router();
-const auth = require("../middleware/authMiddleware");
-const videoController = require("../controllers/videoController");
 
 // ==== UPLOAD (ONLY URL, NOT FILE) ====
 router.post("/upload", auth, videoController.uploadVideo);
@@ -23,4 +24,4 @@ router.get("/:id", videoController.getVideoById);
 // ==== GET SUGGESTED VIDEOS ====
 router.get("/suggest/:category/:excludeId", videoController.getSuggestedVideos);
 
-module.exports = router;
+export default router;

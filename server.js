@@ -1,7 +1,11 @@
-const express = require("express");
-const dotenv = require("dotenv");
-const cors = require("cors");
-const connectDB = require("./db");
+import express from "express";
+import dotenv from "dotenv";
+import cors from "cors";
+import connectDB from "./db.js";
+import authRoutes from "./routes/authRoutes.js";
+import videoRoutes from "./routes/videoRoutes.js";
+import commentRoutes from "./routes/commentRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -11,22 +15,16 @@ app.use(cors());
 app.use(express.json());
 
 // Auth Routes
-const authRoutes = require("./routes/authRoutes");
 app.use("/api/auth", authRoutes);
 
 // Video Routes
-const videoRoutes = require('./routes/videoRoutes');
-app.use('/api/videos', videoRoutes);
+app.use("/api/videos", videoRoutes);
 
 // Comment Routes
-const commentRoutes = require("./routes/commentRoutes");
 app.use("/api/comments", commentRoutes);
 
-
 // User/Profile Routes
-const userRoutes = require("./routes/userRoutes");
 app.use("/api/users", userRoutes);
-
 
 app.get("/", (req, res) => {
   res.send("YouTube Clone Backend Running...");

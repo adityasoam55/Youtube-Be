@@ -1,5 +1,4 @@
-// backend/src/models/Video.model.js
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const CommentSchema = new mongoose.Schema({
   commentId: String,
@@ -17,6 +16,8 @@ const VideoSchema = new mongoose.Schema({
   category: String,
   channelId: String,
   uploader: String,
+  uploaderName: String,
+  uploaderAvatar: String,
 
   // Now a URL to an external video (YouTube embed URL or MP4 public link)
   videoUrl: { type: String, required: true },
@@ -32,4 +33,4 @@ const VideoSchema = new mongoose.Schema({
   comments: [CommentSchema],
 });
 
-module.exports = mongoose.model("Video", VideoSchema);
+export default mongoose.model("Video", VideoSchema);

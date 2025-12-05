@@ -1,8 +1,9 @@
-const express = require("express");
+import express from "express";
+import auth from "../middleware/authMiddleware.js";
+import upload from "../middleware/multerDisk.js";
+import * as userController from "../controllers/userController.js";
+
 const router = express.Router();
-const auth = require("../middleware/authMiddleware");
-const upload = require("../middleware/multerDisk"); // for image
-const userController = require("../controllers/userController");
 
 router.get("/me", auth, userController.getMe);
 router.put("/update", auth, userController.updateUser);
@@ -12,7 +13,6 @@ router.put(
   upload.single("banner"),
   userController.updateBanner
 );
-
 router.put(
   "/avatar",
   auth,
@@ -20,4 +20,4 @@ router.put(
   userController.updateAvatar
 );
 
-module.exports = router;
+export default router;
