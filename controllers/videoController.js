@@ -3,14 +3,21 @@ import User from "../models/User.model.js";
 import { v4 as uuidv4 } from "uuid";
 
 /**
- * Helper: normalize YouTube links to embed URL and generate thumbnail
+ * ============================================================
+ * Utility: Normalize YouTube links → embed + thumbnail
+ * Supports:
+ *  - https://youtube.com/watch?v=ID
+ *  - https://youtu.be/ID
+ *  - https://youtube.com/embed/ID
+ *  - Direct .mp4, .webm links
+ * ============================================================
  */
 function normalizeVideoLink(url) {
   if (!url) return { videoUrl: "", thumbnailUrl: "" };
 
   const trimmed = url.trim();
 
-  // YouTube watch URL
+  // Format: watch?v=ID
   const ytWatch = trimmed.match(/[?&]v=([^&]+)/);
   if (ytWatch && ytWatch[1]) {
     const id = ytWatch[1];
@@ -20,7 +27,7 @@ function normalizeVideoLink(url) {
     };
   }
 
-  // youtu.be short link
+  // Format: youtu.be/ID
   const ytShort = trimmed.match(/youtu\.be\/([^?&/]+)/);
   if (ytShort && ytShort[1]) {
     const id = ytShort[1];
@@ -30,7 +37,7 @@ function normalizeVideoLink(url) {
     };
   }
 
-  // embed link already
+  // Already embed format
   const ytEmbed = trimmed.match(/youtube\.com\/embed\/([^?&/]+)/);
   if (ytEmbed && ytEmbed[1]) {
     const id = ytEmbed[1];
@@ -40,16 +47,21 @@ function normalizeVideoLink(url) {
     };
   }
 
-  // If link looks like mp4 or other direct video host, keep it and no thumbnail
+  // Direct video file (mp4, webm, etc.)
   if (/\.(mp4|webm|ogg|mov|mkv)$/i.test(trimmed)) {
     return { videoUrl: trimmed, thumbnailUrl: "" };
   }
 
-  // Fallback: return as-is (app will try to iframe if compatible)
+  // Unknown format → return raw
   return { videoUrl: trimmed, thumbnailUrl: "" };
 }
 
-// Upload video by saving only link
+/**
+ * ============================================================
+ * UPLOAD VIDEO (URL ONLY)
+ * Saves metadata + auto-generates YouTube thumbnail.
+ * ============================================================
+ */
 export const uploadVideo = async (req, res) => {
   try {
     const { title, description, category, videoUrl } = req.body;
@@ -59,33 +71,33 @@ export const uploadVideo = async (req, res) => {
       return res.status(400).json({ message: "Video URL required" });
     }
 
-    // Extract YouTube ID for all formats (watch?v=, youtu.be, embed)
+    /**
+     * Extract YouTube ID from:
+     *  - watch?v=ID
+     *  - youtu.be/ID
+     *  - embed/ID
+     */
     const extractYouTubeId = (url) => {
       let match;
 
-      // watch?v=
-      match = url.match(/[?&]v=([^&]+)/);
+      match = url.match(/[?&]v=([^&]+)/); // watch?v=
       if (match) return match[1];
 
-      // youtu.be/
-      match = url.match(/youtu\.be\/([^?]+)/);
+      match = url.match(/youtu\.be\/([^?]+)/); // youtu.be/
       if (match) return match[1];
 
-      // embed/
-      match = url.match(/embed\/([^?]+)/);
+      match = url.match(/embed\/([^?]+)/); // embed/
       if (match) return match[1];
 
       return null;
     };
 
     const youtubeId = extractYouTubeId(videoUrl);
+    let thumbnailUrl = youtubeId
+      ? `https://i.ytimg.com/vi/${youtubeId}/maxresdefault.jpg`
+      : "";
 
-    let thumbnailUrl = "";
-    if (youtubeId) {
-      // generate HD YouTube thumbnail
-      thumbnailUrl = `https://i.ytimg.com/vi/${youtubeId}/maxresdefault.jpg`;
-    }
-
+    // Create new video entry
     const newVideo = new Video({
       videoId: uuidv4(),
       title,
@@ -109,20 +121,30 @@ export const uploadVideo = async (req, res) => {
   }
 };
 
-// GET ALL and GET BY ID
+/**
+ * ============================================================
+ * GET ALL VIDEOS (Newest First)
+ * Also attaches channel avatar for each video.
+ * ============================================================
+ */
 export const getVideos = async (req, res) => {
   try {
     const videos = await Video.find().sort({ uploadDate: -1 });
-    // Attach uploader avatar from users collection when available
+
+    // Collect channelIds to fetch avatars in 1 DB query
     const channelIds = [
       ...new Set(videos.map((v) => v.channelId).filter(Boolean)),
     ];
+
     const users = await User.find({ userId: { $in: channelIds } });
+
+    // Map userId → avatar
     const avatarMap = {};
     users.forEach((u) => {
       avatarMap[u.userId] = u.avatar || "";
     });
 
+    // Attach avatar to each video
     const videosWithAvatar = videos.map((v) => {
       const obj = v.toObject ? v.toObject() : { ...v };
       obj.uploaderAvatar = avatarMap[v.channelId] || "";
@@ -135,20 +157,34 @@ export const getVideos = async (req, res) => {
   }
 };
 
+/**
+ * ============================================================
+ * GET SINGLE VIDEO BY ID
+ * Also attaches uploader avatar.
+ * ============================================================
+ */
 export const getVideoById = async (req, res) => {
   try {
     const video = await Video.findOne({ videoId: req.params.id });
     if (!video) return res.status(404).json({ message: "Not found" });
-    // attach uploader avatar if available
+
     const user = await User.findOne({ userId: video.channelId });
+
     const obj = video.toObject ? video.toObject() : { ...video };
     obj.uploaderAvatar = (user && user.avatar) || "";
+
     res.json(obj);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
+/**
+ * ============================================================
+ * GET SUGGESTED VIDEOS (Same Category)
+ * Excludes the current video.
+ * ============================================================
+ */
 export const getSuggestedVideos = async (req, res) => {
   try {
     const { category, excludeId } = req.params;
@@ -160,11 +196,11 @@ export const getSuggestedVideos = async (req, res) => {
       .sort({ uploadDate: -1 })
       .limit(8);
 
-    // Attach uploader avatar
     const channelIds = [
       ...new Set(videos.map((v) => v.channelId).filter(Boolean)),
     ];
     const users = await User.find({ userId: { $in: channelIds } });
+
     const avatarMap = {};
     users.forEach((u) => {
       avatarMap[u.userId] = u.avatar || "";
@@ -182,6 +218,11 @@ export const getSuggestedVideos = async (req, res) => {
   }
 };
 
+/**
+ * ============================================================
+ * ADD A VIEW (simple +1 increment)
+ * ============================================================
+ */
 export const addView = async (req, res) => {
   try {
     const updatedVideo = await Video.findOneAndUpdate(
@@ -201,24 +242,32 @@ export const addView = async (req, res) => {
   }
 };
 
+/**
+ * ============================================================
+ * LIKE A VIDEO
+ * Removes dislike if exists.
+ * If already liked → undo like.
+ * ============================================================
+ */
 export const toggleLike = async (req, res) => {
   try {
     const userId = req.user.userId;
     const videoIdParam = req.params.videoId || req.params.id;
+
     if (!videoIdParam)
       return res.status(400).json({ message: "Video id missing" });
 
     const video = await Video.findOne({ videoId: videoIdParam });
     if (!video) return res.status(404).json({ message: "Video not found" });
 
-    // Remove user from dislikes if present
+    // Remove from dislikes
     video.dislikes = video.dislikes.filter((id) => id !== userId);
 
     if (video.likes.includes(userId)) {
       // Unlike
       video.likes = video.likes.filter((id) => id !== userId);
     } else {
-      // Like
+      // Add like
       video.likes.push(userId);
     }
 
@@ -229,24 +278,30 @@ export const toggleLike = async (req, res) => {
   }
 };
 
+/**
+ * ============================================================
+ * DISLIKE A VIDEO
+ * Removes like if exists.
+ * If already disliked → undo dislike.
+ * ============================================================
+ */
 export const toggleDislike = async (req, res) => {
   try {
     const userId = req.user.userId;
     const videoIdParam = req.params.videoId || req.params.id;
+
     if (!videoIdParam)
       return res.status(400).json({ message: "Video id missing" });
 
     const video = await Video.findOne({ videoId: videoIdParam });
     if (!video) return res.status(404).json({ message: "Video not found" });
 
-    // Remove user from likes if present
+    // Remove from likes
     video.likes = video.likes.filter((id) => id !== userId);
 
     if (video.dislikes.includes(userId)) {
-      // Remove dislike
       video.dislikes = video.dislikes.filter((id) => id !== userId);
     } else {
-      // Add dislike
       video.dislikes.push(userId);
     }
 
@@ -257,7 +312,11 @@ export const toggleDislike = async (req, res) => {
   }
 };
 
-// GET VIDEOS BY CHANNEL (for channel owner)
+/**
+ * ============================================================
+ * GET ALL VIDEOS OF LOGGED-IN USER (Channel Page)
+ * ============================================================
+ */
 export const getChannelVideos = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -281,7 +340,15 @@ export const getChannelVideos = async (req, res) => {
   }
 };
 
-// UPDATE VIDEO (only channel owner can update their videos)
+/**
+ * ============================================================
+ * UPDATE VIDEO (Only Owner)
+ * Fields user can modify:
+ *  - title
+ *  - description
+ *  - category
+ * ============================================================
+ */
 export const updateVideo = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -291,14 +358,14 @@ export const updateVideo = async (req, res) => {
     const video = await Video.findOne({ videoId });
     if (!video) return res.status(404).json({ message: "Video not found" });
 
-    // Check if user owns this video
+    // Ownership check
     if (video.channelId !== userId) {
       return res
         .status(403)
         .json({ message: "Not authorized to update this video" });
     }
 
-    // Update video fields
+    // Update editable fields
     if (title) video.title = title;
     if (description !== undefined) video.description = description;
     if (category) video.category = category;
@@ -310,7 +377,11 @@ export const updateVideo = async (req, res) => {
   }
 };
 
-// DELETE VIDEO (only channel owner can delete their videos)
+/**
+ * ============================================================
+ * DELETE VIDEO (Only Owner)
+ * ============================================================
+ */
 export const deleteVideo = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -319,7 +390,7 @@ export const deleteVideo = async (req, res) => {
     const video = await Video.findOne({ videoId });
     if (!video) return res.status(404).json({ message: "Video not found" });
 
-    // Check if user owns this video
+    // Ownership check
     if (video.channelId !== userId) {
       return res
         .status(403)
@@ -327,6 +398,7 @@ export const deleteVideo = async (req, res) => {
     }
 
     await Video.deleteOne({ videoId });
+
     res.json({ message: "Video deleted successfully" });
   } catch (err) {
     res.status(500).json({ message: err.message });

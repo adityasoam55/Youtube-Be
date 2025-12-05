@@ -19,9 +19,7 @@ const VideoSchema = new mongoose.Schema({
   uploaderName: String,
   uploaderAvatar: String,
 
-  // Now a URL to an external video (YouTube embed URL or MP4 public link)
   videoUrl: { type: String, required: true },
-  // Optional thumbnail (YouTube thumbnail or other host)
   thumbnailUrl: { type: String, default: "" },
 
   views: { type: Number, default: 0 },
